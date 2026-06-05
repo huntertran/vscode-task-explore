@@ -1,6 +1,6 @@
 {
-  "name": "task-explorer",
-  "displayName": "Task Explorer",
+  "name": "hunter-task-explorer",
+  "displayName": "Hunter's Task Explorer",
   "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
   "version": "0.1.0",
   "publisher": "huntertran",
