@@ -1,0 +1,104 @@
+{
+  "name": "task-explorer",
+  "displayName": "Task Explorer",
+  "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
+  "version": "0.1.0",
+  "publisher": "huntertran",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "taskExplorer",
+          "title": "Task Explorer",
+          "icon": "media/task-explorer.svg"
+        }
+      ]
+    },
+    "views": {
+      "taskExplorer": [
+        {
+          "id": "taskExplorer.tasksView",
+          "name": "Tasks"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "taskExplorer.refresh",
+        "title": "Refresh Tasks",
+        "category": "Task Explorer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "taskExplorer.runTask",
+        "title": "Run Task",
+        "category": "Task Explorer",
+        "icon": "$(play)"
+      },
+      {
+        "command": "taskExplorer.stopTask",
+        "title": "Stop Task",
+        "category": "Task Explorer",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "taskExplorer.showOutput",
+        "title": "Show Output",
+        "category": "Task Explorer",
+        "icon": "$(output)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "taskExplorer.refresh",
+          "when": "view == taskExplorer.tasksView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "taskExplorer.runTask",
+          "when": "view == taskExplorer.tasksView && viewItem == task",
+          "group": "inline@1"
+        },
+        {
+          "command": "taskExplorer.showOutput",
+          "when": "view == taskExplorer.tasksView && viewItem == taskRunning",
+          "group": "inline@1"
+        },
+        {
+          "command": "taskExplorer.stopTask",
+          "when": "view == taskExplorer.tasksView && viewItem == taskRunning",
+          "group": "inline@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "mocha": "^10.4.0",
+    "typescript": "^5.4.0"
+  }
+}

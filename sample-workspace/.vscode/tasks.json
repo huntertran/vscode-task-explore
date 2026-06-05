@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "say hello",
+      "detail": "Test saying Hello very long long long long long long long long long long description here",
+      "type": "shell",
+      "command": "echo hello from task explorer"
+    },
+    {
+      "label": "count to 5 (slow)",
+      "type": "shell",
+      "command": "ping",
+      "args": [
+        "-n",
+        "6",
+        "127.0.0.1"
+      ]
+    },
+    {
+      "label": "list files",
+      "type": "shell",
+      "command": "dir"
+    }
+  ]
+}
