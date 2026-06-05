@@ -1,6 +1,12 @@
 .vscode/**
+.vscode-test/**
+.vscode-test.mjs
 src/**
+out/test/**
+sample-workspace/**
 **/*.ts
+**/*.map
 **/tsconfig.json
 .gitignore
 node_modules/**
+.claude/**

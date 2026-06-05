@@ -10,6 +10,22 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "tasks",
+    "task runner",
+    "tasks.json",
+    "explorer",
+    "sidebar"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huntertran/vscode-task-explore.git"
+  },
+  "homepage": "https://github.com/huntertran/vscode-task-explore#readme",
+  "bugs": {
+    "url": "https://github.com/huntertran/vscode-task-explore/issues"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -90,7 +106,9 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
@@ -98,6 +116,7 @@
     "@types/vscode": "^1.80.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.9.1",
     "mocha": "^10.4.0",
     "typescript": "^5.4.0"
   }
