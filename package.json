@@ -4,6 +4,7 @@
   "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
   "version": "0.1.0",
   "publisher": "huntertran",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.80.0"
   },

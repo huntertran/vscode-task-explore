@@ -4,6 +4,7 @@
 src/**
 out/test/**
 sample-workspace/**
+scripts/**
 **/*.ts
 **/*.map
 **/tsconfig.json
