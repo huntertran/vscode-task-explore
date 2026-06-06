@@ -45,9 +45,68 @@
       "taskExplorer": [
         {
           "id": "taskExplorer.tasksView",
-          "name": "Tasks"
+          "name": "Tasks",
+          "when": "config.taskExplorer.viewStyle != 'webview'"
+        },
+        {
+          "id": "taskExplorer.tasksWebview",
+          "name": "Tasks",
+          "type": "webview",
+          "when": "config.taskExplorer.viewStyle == 'webview'"
         }
       ]
+    },
+    "configuration": {
+      "title": "Task Explorer",
+      "properties": {
+        "taskExplorer.viewStyle": {
+          "type": "string",
+          "enum": [
+            "tree",
+            "webview"
+          ],
+          "enumDescriptions": [
+            "Native VSCode tree view. Lightweight, single-line items.",
+            "Richer webview: two-line items (title + detail), right-aligned elapsed runtime, and colored run/stop buttons. Heavier."
+          ],
+          "default": "tree",
+          "scope": "application",
+          "description": "How the task list is rendered. Switch takes effect immediately. Global."
+        },
+        "taskExplorer.openDefinitionOnClick": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "When enabled, clicking a task opens the file that defines it (tasks.json / package.json) instead of showing its output."
+        },
+        "taskExplorer.hiddenCategories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Task source categories hidden from the sidebar in this workspace. Manage via Task Explorer settings."
+        },
+        "taskExplorer.hiddenTasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Individual tasks hidden from the sidebar in this workspace (by internal id). Manage via Task Explorer settings."
+        },
+        "taskExplorer.favorites": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Favorited tasks shown in the Favorites section (by internal id). Manage via right-click or Task Explorer settings."
+        }
+      }
     },
     "commands": [
       {
@@ -73,38 +132,73 @@
         "title": "Show Output",
         "category": "Task Explorer",
         "icon": "$(output)"
+      },
+      {
+        "command": "taskExplorer.openSettings",
+        "title": "Open Settings",
+        "category": "Task Explorer",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "taskExplorer.addFavorite",
+        "title": "Add to Favorites",
+        "category": "Task Explorer",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "taskExplorer.removeFavorite",
+        "title": "Remove from Favorites",
+        "category": "Task Explorer",
+        "icon": "$(star-full)"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "taskExplorer.refresh",
-          "when": "view == taskExplorer.tasksView",
-          "group": "navigation"
+          "when": "view == taskExplorer.tasksView || view == taskExplorer.tasksWebview",
+          "group": "navigation@1"
+        },
+        {
+          "command": "taskExplorer.openSettings",
+          "when": "view == taskExplorer.tasksView || view == taskExplorer.tasksWebview",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
           "command": "taskExplorer.runTask",
-          "when": "view == taskExplorer.tasksView && viewItem == task",
+          "when": "view == taskExplorer.tasksView && viewItem =~ /^task(Fav)?$/",
           "group": "inline@1"
         },
         {
           "command": "taskExplorer.showOutput",
-          "when": "view == taskExplorer.tasksView && viewItem == taskRunning",
+          "when": "view == taskExplorer.tasksView && viewItem =~ /^taskRunning(Fav)?$/",
           "group": "inline@1"
         },
         {
           "command": "taskExplorer.stopTask",
-          "when": "view == taskExplorer.tasksView && viewItem == taskRunning",
+          "when": "view == taskExplorer.tasksView && viewItem =~ /^taskRunning(Fav)?$/",
           "group": "inline@2"
+        },
+        {
+          "command": "taskExplorer.addFavorite",
+          "when": "view == taskExplorer.tasksView && viewItem =~ /^task(Running)?$/",
+          "group": "1_fav@1"
+        },
+        {
+          "command": "taskExplorer.removeFavorite",
+          "when": "view == taskExplorer.tasksView && viewItem =~ /^task(Running)?Fav$/",
+          "group": "1_fav@1"
         }
       ]
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "npm run build:css && tsc -p ./",
+    "build:css": "sass media/webview.scss:media/webview.css media/settings.scss:media/settings.css --no-source-map --style=expanded",
+    "watch:css": "sass --watch media/webview.scss:media/webview.css media/settings.scss:media/settings.css --no-source-map",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "vscode-test",
@@ -119,6 +213,7 @@
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.9.1",
     "mocha": "^10.4.0",
+    "sass": "^1.100.0",
     "typescript": "^5.4.0"
   }
 }

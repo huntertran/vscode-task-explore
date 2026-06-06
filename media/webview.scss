@@ -1,0 +1,171 @@
+:root {
+  --row-pad: 6px 8px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 4px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: var(--vscode-list-hoverBackground);
+  }
+}
+
+.chevron {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+.group.collapsed {
+  .chevron {
+    transform: rotate(-90deg);
+  }
+  .group-tasks {
+    display: none;
+  }
+}
+
+.group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  padding: var(--row-pad);
+  padding-left: 6px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+
+  &:hover {
+    background: var(--vscode-list-hoverBackground);
+
+    .star {
+      opacity: 1;
+    }
+  }
+
+  &.running {
+    border-left-color: var(--vscode-charts-green, #89d185);
+  }
+}
+
+.row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0; // hidden until row hover
+
+  &:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+  }
+
+  // Favorited stars stay visible even when not hovering.
+  &.on {
+    opacity: 1;
+    color: var(--vscode-charts-yellow, #e2c08d);
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 11px;
+  opacity: 0.65;
+  margin-top: 2px;
+  margin-left: 26px; // align under the title, past the star
+}
+
+.elapsed {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.85;
+  min-width: 48px;
+  text-align: right;
+}
+
+.action {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+.icon-run {
+  fill: var(--vscode-charts-green, #89d185);
+}
+
+.icon-stop {
+  fill: var(--vscode-charts-red, #f14c4c);
+}
+
+.empty {
+  padding: 12px 8px;
+  opacity: 0.6;
+}

@@ -1,0 +1,8 @@
+{
+    "taskExplorer.hiddenCategories": [
+        "Live Preview"
+    ],
+    "taskExplorer.favorites": [
+        "Workspace::count to 5 (slow)::shell"
+    ]
+}

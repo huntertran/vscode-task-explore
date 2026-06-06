@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="{{styleUri}}" />
+</head>
+<body>
+  <h1>Task Explorer Settings</h1>
+
+  <h2>View style <span class="scope">global</span></h2>
+  <p class="hint">How the task list is rendered in the sidebar.</p>
+  <div class="radios">
+    <label class="choice"><input type="radio" name="viewStyle" value="tree" /> Tree view (light)</label>
+    <label class="choice"><input type="radio" name="viewStyle" value="webview" /> Webview (rich)</label>
+  </div>
+
+  <h2>Behavior <span class="scope">global</span></h2>
+  <label class="choice">
+    <input type="checkbox" id="openDef" />
+    Clicking a task opens its definition (instead of showing output)
+  </label>
+
+  <h2>Visibility <span class="scope">this folder</span></h2>
+  <p class="hint">Uncheck a category or task to hide it from the sidebar. Saved to this workspace.</p>
+  <div id="categories"></div>
+
+  <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
+</body>
+</html>
