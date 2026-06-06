@@ -2,7 +2,7 @@
   "name": "hunter-task-explorer",
   "displayName": "Hunter's Task Explorer",
   "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "huntertran",
   "icon": "media/icon.png",
   "engines": {
@@ -16,7 +16,9 @@
     "task runner",
     "tasks.json",
     "explorer",
-    "sidebar"
+    "sidebar",
+    "favorites",
+    "npm scripts"
   ],
   "license": "MIT",
   "repository": {
