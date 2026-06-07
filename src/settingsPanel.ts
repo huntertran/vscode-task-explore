@@ -13,14 +13,20 @@ import {
   getFavorites,
   setFavorite,
   affectsConfig,
+  getShowWorkspaceScripts,
+  setShowWorkspaceScripts,
+  scriptCategoryKey,
   ViewStyle,
 } from './config';
+import { scanScripts, flattenScripts } from './scriptScanner';
 
 interface TaskRow {
   id: string;
   name: string;
   hidden: boolean;
   favorite: boolean;
+  /** False for scripts (not favoritable) — the UI omits the star. */
+  favoritable?: boolean;
 }
 interface CategoryRow {
   source: string;
@@ -31,6 +37,7 @@ interface CategoryRow {
 interface SettingsState {
   viewStyle: ViewStyle;
   openDefinitionOnClick: boolean;
+  showWorkspaceScripts: boolean;
   categories: CategoryRow[];
 }
 
@@ -89,6 +96,9 @@ export class SettingsPanel {
       case 'setOpenDefinitionOnClick':
         await setOpenDefinitionOnClick(!!msg.on);
         break;
+      case 'setShowWorkspaceScripts':
+        await setShowWorkspaceScripts(!!msg.on);
+        break;
       case 'setCategory':
         if (msg.source !== undefined) {
           await setCategoryHidden(msg.source, !!msg.hidden);
@@ -135,9 +145,35 @@ export class SettingsPanel {
         })),
     }));
 
+    // One settings section per script type (PowerShell, Shell, Batch, …), each a
+    // synthetic category. The category checkbox toggles the whole type via
+    // setCategoryHidden('script:<id>'); each script row toggles setTaskHidden(uri).
+    // Both views honor these.
+    if (getShowWorkspaceScripts()) {
+      for (const cat of await scanScripts()) {
+        const source = scriptCategoryKey(cat.id);
+        categories.push({
+          source,
+          label: `${cat.label} Scripts`,
+          hidden: hiddenCats.has(source),
+          tasks: flattenScripts([cat]).map((f): TaskRow => {
+            const id = f.uri.toString();
+            return {
+              id,
+              name: f.relPath,
+              hidden: hiddenTasks.has(id),
+              favorite: false,
+              favoritable: false,
+            };
+          }),
+        });
+      }
+    }
+
     return {
       viewStyle: getViewStyle(),
       openDefinitionOnClick: getOpenDefinitionOnClick(),
+      showWorkspaceScripts: getShowWorkspaceScripts(),
       categories,
     };
   }

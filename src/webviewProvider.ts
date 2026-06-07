@@ -1,7 +1,16 @@
 import * as vscode from 'vscode';
 import { TaskExplorerProvider, taskId } from './taskProvider';
-import { isCategoryHidden, isTaskHidden, isFavorite, setFavorite } from './config';
+import {
+  isCategoryHidden,
+  isTaskHidden,
+  isFavorite,
+  setFavorite,
+  getShowWorkspaceScripts,
+  isScriptCategoryHidden,
+  SCRIPTS_SOURCE,
+} from './config';
 import { loadWebviewHtml } from './webviewHtml';
+import { scanScripts, ScriptFolderNode } from './scriptScanner';
 
 /** Serializable view model for one task row in the webview. */
 interface TaskVM {
@@ -19,6 +28,43 @@ interface GroupVM {
   source: string;
   label: string;
   tasks: TaskVM[];
+}
+
+interface ScriptFileVM {
+  id: string;
+  name: string;
+  relPath: string;
+  running: boolean;
+  startedAt?: number;
+}
+
+/** Serializable folder node for the scripts tree. */
+interface ScriptFolderVM {
+  name: string;
+  path: string;
+  folders: ScriptFolderVM[];
+  files: ScriptFileVM[];
+}
+
+interface ScriptCategoryVM {
+  id: string;
+  label: string;
+  icon: string;
+  /** CSS color for the category icon, e.g. var(--vscode-charts-blue). */
+  color: string;
+  count: number;
+  tree: ScriptFolderVM;
+}
+
+/** The whole "Workspace Scripts" section; null when empty/disabled. */
+interface ScriptsVM {
+  label: string;
+  categories: ScriptCategoryVM[];
+}
+
+/** Total files in a folder VM subtree. */
+function countFiles(node: ScriptFolderVM): number {
+  return node.files.length + node.folders.reduce((n, f) => n + countFiles(f), 0);
 }
 
 /**
@@ -70,6 +116,15 @@ export class WebviewTaskProvider implements vscode.WebviewViewProvider {
     if (msg.type === 'ready' || msg.type === 'refresh') {
       this.store.refresh();
       await this.postState();
+      return;
+    }
+    if (msg.id && (msg.type === 'openScript' || msg.type === 'runScript' || msg.type === 'stopScript')) {
+      const uri = vscode.Uri.parse(msg.id);
+      if (msg.type === 'openScript') {
+        await vscode.commands.executeCommand('vscode.open', uri);
+      } else {
+        await vscode.commands.executeCommand(`taskExplorer.${msg.type}`, { uri });
+      }
       return;
     }
     const task = msg.id ? this.taskById.get(msg.id) : undefined;
@@ -143,12 +198,54 @@ export class WebviewTaskProvider implements vscode.WebviewViewProvider {
     return groups;
   }
 
+  /** Build a folder VM, dropping hidden scripts and folders left empty. */
+  private folderToVM(node: ScriptFolderNode): ScriptFolderVM {
+    return {
+      name: node.name,
+      path: node.path,
+      folders: node.folders
+        .map((f) => this.folderToVM(f))
+        .filter((v) => v.folders.length || v.files.length),
+      files: node.files
+        .filter((f) => !isTaskHidden(f.uri.toString()))
+        .map((f) => {
+          const running = this.store.getScriptRunning(f.uri);
+          return {
+            id: f.uri.toString(),
+            name: f.name,
+            relPath: f.relPath,
+            running: !!running,
+            startedAt: running?.startedAt,
+          };
+        }),
+    };
+  }
+
+  private async buildScripts(): Promise<ScriptsVM | null> {
+    if (!getShowWorkspaceScripts() || isCategoryHidden(SCRIPTS_SOURCE)) {
+      return null;
+    }
+    const categories = (await scanScripts()).filter((c) => !isScriptCategoryHidden(c.id));
+    const vms = categories
+      .map((c) => {
+        const tree = this.folderToVM(c.root);
+        // 'charts.blue' -> 'var(--vscode-charts-blue)'
+        const color = `var(--vscode-${c.color.replace(/\./g, '-')})`;
+        return { id: c.id, label: c.label, icon: c.icon, color, count: countFiles(tree), tree };
+      })
+      .filter((c) => c.count > 0);
+    if (!vms.length) {
+      return null;
+    }
+    return { label: SCRIPTS_SOURCE, categories: vms };
+  }
+
   private async postState(): Promise<void> {
     if (!this.view) {
       return;
     }
-    const groups = await this.buildGroups();
-    void this.view.webview.postMessage({ type: 'state', groups });
+    const [groups, scripts] = await Promise.all([this.buildGroups(), this.buildScripts()]);
+    void this.view.webview.postMessage({ type: 'state', groups, scripts });
   }
 
   dispose(): void {

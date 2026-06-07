@@ -1,5 +1,29 @@
 # Change Log
 
+## 0.3.0
+
+### Added
+
+- **Workspace Scripts** — a new top-level category, sibling to the task sources,
+  that scans the workspace for script files and groups them by type:
+  - **PowerShell** (`.ps1`, `.psm1`, `.psd1`), **Shell** (`.sh`, `.bash`, `.zsh`,
+    `.ksh`), and **Batch** (`.bat`, `.cmd`), each with a distinct colored icon.
+  - Scripts are shown as a nested **folder tree** mirroring their location on disk.
+  - **Run / stop** any script inline (runs with the right interpreter in an
+    integrated terminal) with ticking **elapsed time** in both views.
+  - **Click** a script to open it in the editor.
+  - Auto-refreshes as script files are added or removed.
+- **Show/hide scripts** in the settings page — toggle a whole script type (e.g.
+  hide all Shell scripts on Windows) or individual scripts, saved per workspace folder.
+- A **Scan workspace scripts** toggle in the settings page (and the
+  `taskExplorer.showWorkspaceScripts` setting) turns the whole feature on/off.
+- The **settings page opens automatically on first install** so the options are
+  discoverable.
+
+### Fixed
+
+- Test extension id corrected so the integration suite activates the extension.
+
 ## 0.2.0
 
 ### Added

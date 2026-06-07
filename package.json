@@ -2,7 +2,7 @@
   "name": "hunter-task-explorer",
   "displayName": "Hunter's Task Explorer",
   "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "huntertran",
   "icon": "media/icon.png",
   "engines": {
@@ -75,6 +75,12 @@
           "scope": "application",
           "description": "How the task list is rendered. Switch takes effect immediately. Global."
         },
+        "taskExplorer.showWorkspaceScripts": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Scan the workspace for script files (.ps1, .sh, .bat, .cmd, .py, …) and list them under a 'Workspace Scripts' category, grouped by script type."
+        },
         "taskExplorer.openDefinitionOnClick": {
           "type": "boolean",
           "default": true,
@@ -136,6 +142,18 @@
         "icon": "$(output)"
       },
       {
+        "command": "taskExplorer.runScript",
+        "title": "Run Script",
+        "category": "Task Explorer",
+        "icon": "$(play)"
+      },
+      {
+        "command": "taskExplorer.stopScript",
+        "title": "Stop Script",
+        "category": "Task Explorer",
+        "icon": "$(debug-stop)"
+      },
+      {
         "command": "taskExplorer.openSettings",
         "title": "Open Settings",
         "category": "Task Explorer",
@@ -192,6 +210,16 @@
           "command": "taskExplorer.removeFavorite",
           "when": "view == taskExplorer.tasksView && viewItem =~ /^task(Running)?Fav$/",
           "group": "1_fav@1"
+        },
+        {
+          "command": "taskExplorer.runScript",
+          "when": "view == taskExplorer.tasksView && viewItem == scriptFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "taskExplorer.stopScript",
+          "when": "view == taskExplorer.tasksView && viewItem == scriptFileRunning",
+          "group": "inline@1"
         }
       ]
     }

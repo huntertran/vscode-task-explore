@@ -4,10 +4,14 @@ import {
   TaskExplorerProvider,
   SourceGroupItem,
   TaskItem,
+  ScriptsRootItem,
+  ScriptCategoryItem,
+  ScriptFolderItem,
+  ScriptFileItem,
   formatElapsed,
 } from '../taskProvider';
 
-const EXT_ID = 'huntertran.task-explorer';
+const EXT_ID = 'huntertran.hunter-task-explorer';
 
 async function getApi(): Promise<{ provider: TaskExplorerProvider }> {
   const ext = vscode.extensions.getExtension(EXT_ID);
@@ -78,6 +82,42 @@ suite('Task Explorer', () => {
       .filter((c): c is TaskItem => c instanceof TaskItem)
       .map((c) => c.task.name);
     assert.ok(labels.includes('say hello'), `"say hello" missing; got ${labels}`);
+  });
+
+  test('Workspace Scripts group scans script files by category and folder', async () => {
+    const { provider } = await getApi();
+    const roots = await provider.getChildren();
+
+    const scriptsRoot = roots.find(
+      (r): r is ScriptsRootItem => r instanceof ScriptsRootItem
+    );
+    assert.ok(scriptsRoot, 'Workspace Scripts group missing');
+
+    const categories = (await provider.getChildren(scriptsRoot)).filter(
+      (c): c is ScriptCategoryItem => c instanceof ScriptCategoryItem
+    );
+    const catLabels = categories.map((c) => c.label);
+    assert.ok(catLabels.includes('PowerShell'), `PowerShell category missing; got ${catLabels}`);
+    assert.ok(catLabels.includes('Shell'), `Shell category missing; got ${catLabels}`);
+
+    // Shell scripts live under scripts/deploy -> a folder node, then files.
+    const shell = categories.find((c) => c.label === 'Shell')!;
+    const shellChildren = await provider.getChildren(shell);
+    const folders = shellChildren.filter((c): c is ScriptFolderItem => c instanceof ScriptFolderItem);
+    assert.ok(folders.length > 0, 'expected a folder node under Shell');
+
+    // Drill into the deepest folder and find a .sh file.
+    const collectFiles = async (item: ScriptFolderItem | ScriptCategoryItem): Promise<string[]> => {
+      const kids = await provider.getChildren(item);
+      const names: string[] = [];
+      for (const k of kids) {
+        if (k instanceof ScriptFileItem) names.push(k.file.name);
+        else if (k instanceof ScriptFolderItem) names.push(...(await collectFiles(k)));
+      }
+      return names;
+    };
+    const shellFiles = await collectFiles(shell);
+    assert.ok(shellFiles.includes('release.sh'), `release.sh missing; got ${shellFiles}`);
   });
 
   test('idle task item exposes Run context, no description', async () => {

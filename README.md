@@ -8,6 +8,8 @@ tasks discovered via the VS Code Tasks API, grouped by source:
 
 ## Features
 
+![features](sample-workspace\features.gif)
+
 ### Run & monitor
 
 - Inline **Run** icon on every task.
@@ -32,6 +34,24 @@ Switch in the settings page or via `taskExplorer.viewStyle`:
 - Add/remove via tree **right-click**, the **star** in the settings page, or the
   **hover star** on each webview row.
 
+### Workspace Scripts
+
+A **Workspace Scripts** category (sibling to the task sources) scans the workspace
+for script files and groups them by type, each with a distinct colored icon:
+
+- **PowerShell** (`.ps1`, `.psm1`, `.psd1`)
+- **Shell** (`.sh`, `.bash`, `.zsh`, `.ksh`)
+- **Batch** (`.bat`, `.cmd`)
+
+- Scripts appear as a **nested folder tree** matching their location on disk.
+- **Run / Stop** any script inline — it runs with the right interpreter in an
+  integrated terminal, with ticking **elapsed time** in both views.
+- **Click** a script to open it in the editor.
+- The list **auto-refreshes** as scripts are added or removed.
+- In the settings page, **show/hide a whole script type** (e.g. hide Shell scripts
+  on Windows where they can't run natively) or individual scripts.
+- Disable entirely with `taskExplorer.showWorkspaceScripts`.
+
 ### Settings page
 
 Open from the **gear** icon in the view title bar:
@@ -47,7 +67,8 @@ Open from the **gear** icon in the view title bar:
 | --- | --- | --- | --- |
 | `taskExplorer.viewStyle` | global | `tree` | `tree` or `webview` rendering. |
 | `taskExplorer.openDefinitionOnClick` | global | `true` | Click a task to open its definition instead of its output. |
-| `taskExplorer.hiddenCategories` | folder | `[]` | Categories hidden from the sidebar. |
+| `taskExplorer.showWorkspaceScripts` | folder | `true` | Scan the workspace for script files and list them under Workspace Scripts. |
+| `taskExplorer.hiddenCategories` | folder | `[]` | Categories (and script types) hidden from the sidebar. |
 | `taskExplorer.hiddenTasks` | folder | `[]` | Tasks hidden from the sidebar. |
 | `taskExplorer.favorites` | folder | `[]` | Favorited tasks. |
 
@@ -80,6 +101,7 @@ folder's `.vscode/tasks.json`. Tests live in `src/test/`.
 
 - `src/extension.ts` — activation, command registration, task lifecycle, jump-to-definition.
 - `src/taskProvider.ts` — tree `TreeDataProvider`, nodes, running-state tracking.
+- `src/scriptScanner.ts` — workspace script discovery, categorization, and run tasks.
 - `src/webviewProvider.ts` — webview sidebar view.
 - `src/settingsPanel.ts` — settings webview panel.
 - `src/config.ts` — settings accessors (view style, visibility, favorites).

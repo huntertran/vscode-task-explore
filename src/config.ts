@@ -17,6 +17,30 @@ export async function setViewStyle(style: ViewStyle): Promise<void> {
   await cfg().update('viewStyle', style, vscode.ConfigurationTarget.Global);
 }
 
+/** Synthetic source label for the workspace-scripts category. */
+export const SCRIPTS_SOURCE = 'Workspace Scripts';
+
+/** When true, scan the workspace for script files and show them under Workspace Scripts. */
+export function getShowWorkspaceScripts(): boolean {
+  return cfg().get<boolean>('showWorkspaceScripts', true);
+}
+
+export async function setShowWorkspaceScripts(on: boolean): Promise<void> {
+  const target = vscode.workspace.workspaceFolders?.length
+    ? vscode.ConfigurationTarget.Workspace
+    : vscode.ConfigurationTarget.Global;
+  await cfg().update('showWorkspaceScripts', on, target);
+}
+
+/** hiddenCategories key for a whole script type (e.g. all Shell scripts). */
+export function scriptCategoryKey(id: string): string {
+  return `script:${id}`;
+}
+
+export function isScriptCategoryHidden(id: string): boolean {
+  return isCategoryHidden(scriptCategoryKey(id));
+}
+
 /** When true, clicking a task opens its definition instead of showing output. */
 export function getOpenDefinitionOnClick(): boolean {
   return cfg().get<boolean>('openDefinitionOnClick', true);

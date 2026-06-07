@@ -169,3 +169,54 @@ body {
   padding: 12px 8px;
   opacity: 0.6;
 }
+
+// --- Workspace Scripts ------------------------------------------------------
+
+.cat-icon,
+.file-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    display: block;
+  }
+}
+
+// File icons are tinted inline to match their category (like the tree); the
+// fallback color applies only if no tint is set.
+.file-icon {
+  color: var(--vscode-descriptionForeground);
+}
+
+.group-count {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+// Nested script categories/folders: lighter, non-uppercase headers so they
+// read as a tree rather than top-level groups.
+.script-category > .group-header,
+.script-folder > .group-header {
+  padding-top: 3px;
+  padding-bottom: 3px;
+
+  .group-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    font-size: var(--vscode-font-size);
+    opacity: 0.9;
+  }
+}
+
+// Keep .row as a column (like task rows) so .row-main fills the width and the
+// run/stop button aligns to the right edge; just tighten the icon gap.
+.row.script-file .row-main {
+  gap: 6px;
+}

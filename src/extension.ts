@@ -4,6 +4,7 @@ import { WebviewTaskProvider } from './webviewProvider';
 import { SettingsPanel } from './settingsPanel';
 import { affectsConfig, getOpenDefinitionOnClick, setFavorite } from './config';
 import { taskId } from './taskProvider';
+import { scriptWatchGlob, buildScriptTask, SCRIPT_TASK_TYPE } from './scriptScanner';
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new TaskExplorerProvider();
@@ -16,7 +17,14 @@ export function activate(context: vscode.ExtensionContext) {
   // (gated by `when` clauses in package.json), but both providers are registered.
   const webviewProvider = new WebviewTaskProvider(context.extensionUri, provider);
 
+  // Keep the Workspace Scripts tree current as script files are added/removed/renamed.
+  const scriptWatcher = vscode.workspace.createFileSystemWatcher(scriptWatchGlob());
+  const onScriptChange = () => provider.refresh();
+  scriptWatcher.onDidCreate(onScriptChange);
+  scriptWatcher.onDidDelete(onScriptChange);
+
   context.subscriptions.push(
+    scriptWatcher,
     treeView,
     provider,
     webviewProvider,
@@ -109,13 +117,55 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // Keep running state in sync with the real task lifecycle.
-    vscode.tasks.onDidStartTask((e) => provider.markStarted(e.execution)),
-    vscode.tasks.onDidEndTask((e) => provider.markEnded(e.execution)),
+    vscode.commands.registerCommand('taskExplorer.runScript', async (item?: ScriptArg) => {
+      const uri = scriptUriOf(item);
+      if (!uri) {
+        return;
+      }
+      try {
+        const execution = await vscode.tasks.executeTask(buildScriptTask(uri));
+        provider.markScriptStarted(uri, execution);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Failed to run script "${uri.fsPath}": ${err}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('taskExplorer.stopScript', (item?: ScriptArg) => {
+      const uri = scriptUriOf(item);
+      if (uri) {
+        provider.getScriptRunning(uri)?.execution.terminate();
+      }
+    }),
+
+    // Keep running state in sync with the real task lifecycle. Script tasks
+    // (run from the explorer) carry their uri in the definition.
+    vscode.tasks.onDidStartTask((e) => {
+      const uri = scriptTaskUri(e.execution.task);
+      if (uri) {
+        provider.markScriptStarted(uri, e.execution);
+      } else {
+        provider.markStarted(e.execution);
+      }
+    }),
+    vscode.tasks.onDidEndTask((e) => {
+      const uri = scriptTaskUri(e.execution.task);
+      if (uri) {
+        provider.markScriptEnded(uri);
+      } else {
+        provider.markEnded(e.execution);
+      }
+    }),
 
     // Re-fetch when tasks change (e.g. tasks.json edited).
     vscode.tasks.onDidStartTaskProcess(() => provider.refresh())
   );
+
+  // On first install, open the settings page once so users discover the options.
+  const WELCOMED_KEY = 'taskExplorer.welcomed';
+  if (!context.globalState.get<boolean>(WELCOMED_KEY)) {
+    void context.globalState.update(WELCOMED_KEY, true);
+    void vscode.commands.executeCommand('taskExplorer.openSettings');
+  }
 
   // Exposed for integration tests.
   return { provider };
@@ -123,6 +173,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   // Provider disposed via context.subscriptions.
+}
+
+/** Run/stop commands accept a tree ScriptFileItem ({file.uri}) or {uri}. */
+type ScriptArg = { file?: { uri: vscode.Uri }; uri?: vscode.Uri };
+
+function scriptUriOf(item?: ScriptArg): vscode.Uri | undefined {
+  return item?.file?.uri ?? item?.uri;
+}
+
+/** Extract the script uri from a task we created via buildScriptTask, else undefined. */
+function scriptTaskUri(task: vscode.Task): vscode.Uri | undefined {
+  const def = task.definition as { type?: string; scriptUri?: string };
+  return def?.type === SCRIPT_TASK_TYPE && def.scriptUri
+    ? vscode.Uri.parse(def.scriptUri)
+    : undefined;
 }
 
 /**

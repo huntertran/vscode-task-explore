@@ -1,0 +1,6 @@
+{
+    "taskExplorer.hiddenCategories": [
+        "tsc",
+        "Live Preview"
+    ]
+}
