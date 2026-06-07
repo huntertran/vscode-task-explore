@@ -8,7 +8,7 @@ tasks discovered via the VS Code Tasks API, grouped by source:
 
 ## Features
 
-![features](sample-workspace\features.gif)
+![features](https://raw.githubusercontent.com/huntertran/vscode-task-explore/refs/heads/main/sample-workspace/features.gif)
 
 ### Run & monitor
 
