@@ -12,11 +12,14 @@ interface RunningInfo {
   startedAt: number;
 }
 
+type ScriptScanState = 'deferred' | 'idle' | 'scanning' | 'done';
+
 type Node =
   | SourceGroupItem
   | FavoritesGroupItem
   | TaskItem
   | ScriptsRootItem
+  | ScriptScanningItem
   | ScriptCategoryItem
   | ScriptFolderItem
   | ScriptFileItem;
@@ -46,6 +49,15 @@ export class ScriptsRootItem extends vscode.TreeItem {
     super(SCRIPTS_SOURCE, vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = 'scriptsRoot';
     this.iconPath = new vscode.ThemeIcon('file-code');
+  }
+}
+
+/** Placeholder shown while the workspace script scan is pending or in progress. */
+class ScriptScanningItem extends vscode.TreeItem {
+  constructor(label: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('loading~spin');
+    this.contextValue = 'scriptScanning';
   }
 }
 
@@ -207,8 +219,22 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
    */
   private items = new Map<string, TaskItem[]>();
 
-  /** Script tree cached at root build; children navigation reads from it. */
+  /**
+   * Task list cache — populated on first fetch, reused on subsequent renders.
+   * Stale-while-revalidate: subsequent getChildren calls return this immediately
+   * and kick off a background re-fetch; only re-render when tasks actually change.
+   */
+  private cachedTasks: vscode.Task[] = [];
+  private taskCachePopulated = false;
+  private taskCacheDirty = false;
+  private taskFetchInFlight = false;
+
+  /** Script tree cached after scan completes; children navigation reads from it. */
   private scriptCategories: ScriptCategory[] = [];
+  private scriptScanState: ScriptScanState = 'idle';
+  private scanGen = 0;
+  /** The live ScriptsRootItem so targeted refresh can update just its children. */
+  private cachedScriptsRoot: ScriptsRootItem | undefined;
   /** Running scripts keyed by uri.toString(). */
   private runningScripts = new Map<string, { execution: vscode.TaskExecution; startedAt: number }>();
   /** Rendered running ScriptFileItems per uri, so ticks update the live copy. */
@@ -263,7 +289,81 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
   }
 
   refresh(): void {
+    this.taskCacheDirty = true;
+    if (this.scriptScanState !== 'deferred') {
+      this.scriptScanState = 'idle';
+      this.scanGen++;
+    }
     this._onDidChangeTreeData.fire();
+  }
+
+  deferScriptScan(): void {
+    this.scriptScanState = 'deferred';
+  }
+
+  enableScriptScan(): void {
+    this.scriptScanState = 'idle';
+    if (this.cachedScriptsRoot) {
+      this._onDidChangeTreeData.fire(this.cachedScriptsRoot);
+    } else {
+      this._onDidChangeTreeData.fire();
+    }
+  }
+
+  /** Start scan if idle (no-op if deferred, scanning, or done). */
+  ensureScanStarted(): void {
+    if (this.scriptScanState === 'idle') {
+      void this._runScan();
+    }
+  }
+
+  /**
+   * Returns cached categories once scan is complete, null while pending.
+   * Lets the webview share the tree's scan cache without re-scanning.
+   */
+  getScriptCategoriesIfReady(): ScriptCategory[] | null {
+    return this.scriptScanState === 'done' ? this.scriptCategories : null;
+  }
+
+  private _taskSignature(tasks: vscode.Task[]): string {
+    return tasks.map((t) => taskId(t)).sort().join('\0');
+  }
+
+  private async _backgroundFetchTasks(): Promise<void> {
+    if (this.taskFetchInFlight) {
+      return; // already in-flight
+    }
+    this.taskFetchInFlight = true;
+    try {
+      const tasks = await vscode.tasks.fetchTasks();
+      const changed = this._taskSignature(tasks) !== this._taskSignature(this.cachedTasks);
+      this.cachedTasks = tasks;
+      this.taskCacheDirty = false;
+      if (changed) {
+        this._onDidChangeTreeData.fire();
+      }
+    } finally {
+      this.taskFetchInFlight = false;
+    }
+  }
+
+  private async _runScan(): Promise<void> {
+    const gen = ++this.scanGen;
+    this.scriptScanState = 'scanning';
+    const categories = await scanScripts();
+    if (gen !== this.scanGen) {
+      return; // superseded by a newer scan request
+    }
+    this.scriptCategories = categories;
+    this.scriptScanState = 'done';
+    // Targeted refresh is more efficient (avoids re-fetching tasks).
+    // Fall back to full refresh when: no cached root (webview-only mode)
+    // or no scripts found (need to remove ScriptsRootItem from root).
+    if (this.cachedScriptsRoot && categories.length > 0) {
+      this._onDidChangeTreeData.fire(this.cachedScriptsRoot);
+    } else {
+      this._onDidChangeTreeData.fire();
+    }
   }
 
   getTreeItem(element: Node): vscode.TreeItem {
@@ -275,7 +375,17 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
       // Root rebuild: reset the per-id item tracking.
       this.items.clear();
       this.scriptItems.clear();
-      const tasks = await vscode.tasks.fetchTasks();
+
+      if (!this.taskCachePopulated) {
+        // Cold start: must await — no cache to serve yet.
+        this.cachedTasks = await vscode.tasks.fetchTasks();
+        this.taskCachePopulated = true;
+        this.taskCacheDirty = false;
+      } else if (this.taskCacheDirty) {
+        // Stale-while-revalidate: serve cached tasks immediately, re-fetch in background.
+        void this._backgroundFetchTasks();
+      }
+      const tasks = this.cachedTasks;
       const hasFavorites = tasks.some((t) => isFavorite(taskId(t)));
       const sources = [...new Set(tasks.map((t) => t.source))]
         .filter((s) => !isCategoryHidden(s));
@@ -287,13 +397,21 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
       });
       const groups: Node[] = sources.map((s) => new SourceGroupItem(s));
 
-      // Scan scripts once per root rebuild; cache for child navigation.
-      this.scriptCategories =
-        getShowWorkspaceScripts() && !isCategoryHidden(SCRIPTS_SOURCE)
-          ? await scanScripts()
-          : [];
-      if (this.visibleScriptCategories().length) {
-        groups.push(new ScriptsRootItem());
+      this.cachedScriptsRoot = undefined;
+      if (getShowWorkspaceScripts() && !isCategoryHidden(SCRIPTS_SOURCE)) {
+        // Show ScriptsRootItem unless scan is done and found nothing.
+        if (this.scriptScanState !== 'done' || this.visibleScriptCategories().length > 0) {
+          const root = new ScriptsRootItem();
+          this.cachedScriptsRoot = root;
+          groups.push(root);
+        }
+      } else {
+        // Scripts disabled — reset so a rescan runs when re-enabled.
+        if (this.scriptScanState !== 'deferred') {
+          this.scriptScanState = 'idle';
+          this.scanGen++;
+        }
+        this.scriptCategories = [];
       }
 
       // Favorites pinned at the very top.
@@ -301,6 +419,16 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
     }
 
     if (element instanceof ScriptsRootItem) {
+      if (this.scriptScanState === 'deferred') {
+        return [new ScriptScanningItem('Scan delayed…')];
+      }
+      if (this.scriptScanState === 'idle') {
+        void this._runScan();
+        return [new ScriptScanningItem('Scanning scripts…')];
+      }
+      if (this.scriptScanState === 'scanning') {
+        return [new ScriptScanningItem('Scanning scripts…')];
+      }
       return this.visibleScriptCategories().map(
         ({ category, count }) => new ScriptCategoryItem(category, count)
       );
@@ -315,8 +443,7 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
     }
 
     if (element instanceof FavoritesGroupItem) {
-      const tasks = await vscode.tasks.fetchTasks();
-      return tasks
+      return this.cachedTasks
         .filter((t) => isFavorite(taskId(t)))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((t) => {
@@ -329,8 +456,7 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
     }
 
     if (element instanceof SourceGroupItem) {
-      const tasks = await vscode.tasks.fetchTasks();
-      return tasks
+      return this.cachedTasks
         .filter((t) => t.source === element.source && !isTaskHidden(taskId(t)))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((t) => {

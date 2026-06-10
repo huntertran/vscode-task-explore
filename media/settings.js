@@ -19,6 +19,13 @@
     vscode.postMessage({ type: 'setShowWorkspaceScripts', on: showScripts.checked });
   });
 
+  const scanDelay = document.getElementById('scanDelay');
+  scanDelay.addEventListener('change', () => {
+    const v = Math.max(0, parseInt(scanDelay.value, 10) || 0);
+    scanDelay.value = v;
+    vscode.postMessage({ type: 'setScriptScanDelay', value: v });
+  });
+
   const STAR_FULL = '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.3l2 4.1 4.5.7-3.3 3.2.8 4.5L8 11.7 3.9 13.8l.8-4.5L1.5 6.1 6 5.4z"/></svg>';
   const STAR_EMPTY = '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" d="M8 1.8l1.9 3.8 4.2.6-3 3 .7 4.2L8 11.4 4.2 13.4l.7-4.2-3-3 4.2-.6z"/></svg>';
 
@@ -104,6 +111,7 @@
       });
       openDef.checked = s.openDefinitionOnClick;
       showScripts.checked = s.showWorkspaceScripts;
+      scanDelay.value = s.scriptScanDelay;
       renderCategories(s.categories);
     }
   });

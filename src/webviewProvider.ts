@@ -10,7 +10,7 @@ import {
   SCRIPTS_SOURCE,
 } from './config';
 import { loadWebviewHtml } from './webviewHtml';
-import { scanScripts, ScriptFolderNode } from './scriptScanner';
+import { ScriptCategory, ScriptFolderNode } from './scriptScanner';
 
 /** Serializable view model for one task row in the webview. */
 interface TaskVM {
@@ -221,11 +221,17 @@ export class WebviewTaskProvider implements vscode.WebviewViewProvider {
     };
   }
 
-  private async buildScripts(): Promise<ScriptsVM | null> {
+  private buildScripts(): ScriptsVM | null {
     if (!getShowWorkspaceScripts() || isCategoryHidden(SCRIPTS_SOURCE)) {
       return null;
     }
-    const categories = (await scanScripts()).filter((c) => !isScriptCategoryHidden(c.id));
+    // Trigger scan if idle; no-op when deferred or already running.
+    this.store.ensureScanStarted();
+    const allCategories = this.store.getScriptCategoriesIfReady();
+    if (!allCategories) {
+      return null; // scan deferred, in-progress, or not yet started
+    }
+    const categories = allCategories.filter((c) => !isScriptCategoryHidden(c.id));
     const vms = categories
       .map((c) => {
         const tree = this.folderToVM(c.root);
@@ -244,7 +250,8 @@ export class WebviewTaskProvider implements vscode.WebviewViewProvider {
     if (!this.view) {
       return;
     }
-    const [groups, scripts] = await Promise.all([this.buildGroups(), this.buildScripts()]);
+    const [groups] = await Promise.all([this.buildGroups()]);
+    const scripts = this.buildScripts();
     void this.view.webview.postMessage({ type: 'state', groups, scripts });
   }
 

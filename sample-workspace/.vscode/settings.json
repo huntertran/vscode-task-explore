@@ -4,5 +4,6 @@
     "taskExplorer.favorites": [
         "Workspace::count to 5 (slow)::shell"
     ],
-    "taskExplorer.showWorkspaceScripts": true
+    "taskExplorer.showWorkspaceScripts": true,
+    "taskExplorer.scriptScanDelay": 2000
 }

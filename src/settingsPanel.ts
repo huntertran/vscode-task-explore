@@ -15,6 +15,8 @@ import {
   affectsConfig,
   getShowWorkspaceScripts,
   setShowWorkspaceScripts,
+  getScriptScanDelay,
+  setScriptScanDelay,
   scriptCategoryKey,
   ViewStyle,
 } from './config';
@@ -38,6 +40,7 @@ interface SettingsState {
   viewStyle: ViewStyle;
   openDefinitionOnClick: boolean;
   showWorkspaceScripts: boolean;
+  scriptScanDelay: number;
   categories: CategoryRow[];
 }
 
@@ -83,7 +86,7 @@ export class SettingsPanel {
     );
   }
 
-  private async onMessage(msg: { type: string; style?: ViewStyle; source?: string; id?: string; hidden?: boolean; on?: boolean; fav?: boolean }): Promise<void> {
+  private async onMessage(msg: { type: string; style?: ViewStyle; source?: string; id?: string; hidden?: boolean; on?: boolean; fav?: boolean; value?: number }): Promise<void> {
     switch (msg.type) {
       case 'ready':
         await this.post();
@@ -98,6 +101,9 @@ export class SettingsPanel {
         break;
       case 'setShowWorkspaceScripts':
         await setShowWorkspaceScripts(!!msg.on);
+        break;
+      case 'setScriptScanDelay':
+        await setScriptScanDelay(msg.value ?? 0);
         break;
       case 'setCategory':
         if (msg.source !== undefined) {
@@ -174,6 +180,7 @@ export class SettingsPanel {
       viewStyle: getViewStyle(),
       openDefinitionOnClick: getOpenDefinitionOnClick(),
       showWorkspaceScripts: getShowWorkspaceScripts(),
+      scriptScanDelay: getScriptScanDelay(),
       categories,
     };
   }

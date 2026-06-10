@@ -32,6 +32,18 @@ export async function setShowWorkspaceScripts(on: boolean): Promise<void> {
   await cfg().update('showWorkspaceScripts', on, target);
 }
 
+/** Milliseconds to wait before the initial script scan. 0 = scan immediately. */
+export function getScriptScanDelay(): number {
+  return Math.max(0, cfg().get<number>('scriptScanDelay', 0));
+}
+
+export async function setScriptScanDelay(ms: number): Promise<void> {
+  const target = vscode.workspace.workspaceFolders?.length
+    ? vscode.ConfigurationTarget.Workspace
+    : vscode.ConfigurationTarget.Global;
+  await cfg().update('scriptScanDelay', Math.max(0, ms), target);
+}
+
 /** hiddenCategories key for a whole script type (e.g. all Shell scripts). */
 export function scriptCategoryKey(id: string): string {
   return `script:${id}`;

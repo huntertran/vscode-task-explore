@@ -1,5 +1,26 @@
 # Change Log
 
+## 0.4.0
+
+### Added
+
+- **Script scan delay** — new `taskExplorer.scriptScanDelay` setting (milliseconds,
+  default `0`). Set to a non-zero value on large repos so the sidebar opens instantly
+  and the script scan runs after the configured delay. Configurable in the Settings page.
+- **Loading indicator** — the Workspace Scripts section shows a spinner while the scan
+  is pending or in progress, so it is always clear what state the tree is in.
+
+### Fixed / Performance
+
+- **Stale-while-revalidate task cache** — the task list is now cached after the first
+  fetch. Reopening the sidebar on a large monorepo is instant (serves the cache
+  immediately) and re-fetches in the background, re-rendering only when tasks actually
+  changed.
+- **Eliminated redundant `fetchTasks()` calls** — a full tree render previously called
+  `vscode.tasks.fetchTasks()` once per expanded group (N source groups + favorites +
+  root). All child groups now share the single fetch result from the root pass, reducing
+  the call count from N+2 to 1 per render cycle.
+
 ## 0.3.0
 
 ### Added

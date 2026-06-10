@@ -2,7 +2,7 @@
   "name": "hunter-task-explorer",
   "displayName": "Hunter's Task Explorer",
   "description": "Explore and run tasks from .vscode/tasks.json and other detected sources in a sidebar.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "huntertran",
   "icon": "media/icon.png",
   "engines": {
@@ -80,6 +80,13 @@
           "default": true,
           "scope": "resource",
           "description": "Scan the workspace for script files (.ps1, .sh, .bat, .cmd, .py, …) and list them under a 'Workspace Scripts' category, grouped by script type."
+        },
+        "taskExplorer.scriptScanDelay": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "scope": "resource",
+          "description": "Milliseconds to wait after the extension activates before scanning the workspace for script files. Set to a non-zero value for large workspaces where the scan noticeably slows down startup. 0 = scan immediately."
         },
         "taskExplorer.openDefinitionOnClick": {
           "type": "boolean",

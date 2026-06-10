@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TaskExplorerProvider, TaskItem } from './taskProvider';
 import { WebviewTaskProvider } from './webviewProvider';
 import { SettingsPanel } from './settingsPanel';
-import { affectsConfig, getOpenDefinitionOnClick, setFavorite } from './config';
+import { affectsConfig, getOpenDefinitionOnClick, setFavorite, getScriptScanDelay } from './config';
 import { taskId } from './taskProvider';
 import { scriptWatchGlob, buildScriptTask, SCRIPT_TASK_TYPE } from './scriptScanner';
 
@@ -16,6 +16,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Webview alternative; only the view matching taskExplorer.viewStyle is shown
   // (gated by `when` clauses in package.json), but both providers are registered.
   const webviewProvider = new WebviewTaskProvider(context.extensionUri, provider);
+
+  // Delayed script scan: defer until after the configured delay so large repos
+  // don't block the sidebar on first open.
+  const scanDelay = getScriptScanDelay();
+  if (scanDelay > 0) {
+    provider.deferScriptScan();
+    setTimeout(() => provider.enableScriptScan(), scanDelay);
+  }
 
   // Keep the Workspace Scripts tree current as script files are added/removed/renamed.
   const scriptWatcher = vscode.workspace.createFileSystemWatcher(scriptWatchGlob());
