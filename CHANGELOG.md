@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.5.0
+
+### Added
+
+- **Running task badge** — the Task Explorer icon in the activity bar now shows a
+  badge with the number of tasks and workspace scripts currently running, so
+  background work is visible even when the sidebar is collapsed. A task that appears
+  in both Favorites and its source group is counted once.
+
 ## 0.4.0
 
 ### Added
