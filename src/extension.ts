@@ -2,7 +2,13 @@ import * as vscode from 'vscode';
 import { TaskExplorerProvider, TaskItem } from './taskProvider';
 import { WebviewTaskProvider } from './webviewProvider';
 import { SettingsPanel } from './settingsPanel';
-import { affectsConfig, getOpenDefinitionOnClick, setFavorite, getScriptScanDelay } from './config';
+import {
+  affectsConfig,
+  getOpenDefinitionOnClick,
+  setFavorite,
+  getScriptScanDelay,
+  getViewStyle,
+} from './config';
 import { taskId } from './taskProvider';
 import { scriptWatchGlob, buildScriptTask, SCRIPT_TASK_TYPE } from './scriptScanner';
 
@@ -16,6 +22,20 @@ export function activate(context: vscode.ExtensionContext) {
   // Webview alternative; only the view matching taskExplorer.viewStyle is shown
   // (gated by `when` clauses in package.json), but both providers are registered.
   const webviewProvider = new WebviewTaskProvider(context.extensionUri, provider);
+
+  // Activity bar badge: number of tasks/scripts currently running. VSCode sums
+  // the badges of all views in a container, so only the view matching
+  // taskExplorer.viewStyle gets one; the other is cleared.
+  const applyBadge = (count = provider.runningCount) => {
+    const badge: vscode.ViewBadge | undefined =
+      count > 0
+        ? { value: count, tooltip: `${count} task${count === 1 ? '' : 's'} running` }
+        : undefined;
+    const webviewMode = getViewStyle() === 'webview';
+    treeView.badge = webviewMode ? undefined : badge;
+    webviewProvider.setBadge(webviewMode ? badge : undefined);
+  };
+  applyBadge();
 
   // Delayed script scan: defer until after the configured delay so large repos
   // don't block the sidebar on first open.
@@ -34,6 +54,14 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     scriptWatcher,
     treeView,
+    provider.onDidChangeRunningCount(applyBadge),
+
+    // Badge follows the active view when the render mode changes.
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('taskExplorer.viewStyle')) {
+        applyBadge();
+      }
+    }),
     provider,
     webviewProvider,
 

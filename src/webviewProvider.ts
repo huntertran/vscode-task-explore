@@ -90,8 +90,24 @@ export class WebviewTaskProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  /**
+   * Activity bar badge. Owned by extension.ts, which gives the badge to exactly
+   * one view: badges of every view in a container are summed, so setting it on
+   * both the tree and the webview would double the count.
+   */
+  setBadge(badge: vscode.ViewBadge | undefined): void {
+    this.badge = badge;
+    if (this.view) {
+      this.view.badge = badge;
+    }
+  }
+
+  /** Current badge, re-applied when the webview is (re)resolved. */
+  private badge: vscode.ViewBadge | undefined;
+
   async resolveWebviewView(webviewView: vscode.WebviewView): Promise<void> {
     this.view = webviewView;
+    webviewView.badge = this.badge;
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],

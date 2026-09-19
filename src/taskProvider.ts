@@ -211,6 +211,10 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
   private _onDidChangeTreeData = new vscode.EventEmitter<Node | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  /** Fires with the new running count (tasks + scripts) whenever it changes. */
+  private _onDidChangeRunningCount = new vscode.EventEmitter<number>();
+  readonly onDidChangeRunningCount = this._onDidChangeRunningCount.event;
+
   private running = new Map<string, RunningInfo>();
   private tickTimer: NodeJS.Timeout | undefined;
   /**
@@ -473,6 +477,19 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
 
   // --- running state -------------------------------------------------------
 
+  /** Number of tasks and workspace scripts currently running. */
+  get runningCount(): number {
+    return this.running.size + this.runningScripts.size;
+  }
+
+  /** Fire onDidChangeRunningCount only when the count actually moved. */
+  private notifyRunningCount(previous: number): void {
+    const current = this.runningCount;
+    if (current !== previous) {
+      this._onDidChangeRunningCount.fire(current);
+    }
+  }
+
   isRunning(task: vscode.Task): boolean {
     return this.running.has(taskId(task));
   }
@@ -482,6 +499,7 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
   }
 
   markStarted(execution: vscode.TaskExecution): void {
+    const before = this.runningCount;
     const id = taskId(execution.task);
     if (!this.running.has(id)) {
       this.running.set(id, { execution, startedAt: Date.now() });
@@ -490,12 +508,15 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
       this.running.get(id)!.execution = execution;
     }
     this.ensureTicking();
+    this.notifyRunningCount(before);
     this.refresh();
   }
 
   markEnded(execution: vscode.TaskExecution): void {
+    const before = this.runningCount;
     this.running.delete(taskId(execution.task));
     this.ensureTicking();
+    this.notifyRunningCount(before);
     this.refresh();
   }
 
@@ -510,6 +531,7 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
   }
 
   markScriptStarted(uri: vscode.Uri, execution: vscode.TaskExecution): void {
+    const before = this.runningCount;
     const key = uri.toString();
     if (!this.runningScripts.has(key)) {
       this.runningScripts.set(key, { execution, startedAt: Date.now() });
@@ -517,12 +539,15 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
       this.runningScripts.get(key)!.execution = execution;
     }
     this.ensureTicking();
+    this.notifyRunningCount(before);
     this.refresh();
   }
 
   markScriptEnded(uri: vscode.Uri): void {
+    const before = this.runningCount;
     this.runningScripts.delete(uri.toString());
     this.ensureTicking();
+    this.notifyRunningCount(before);
     this.refresh();
   }
 
@@ -572,5 +597,6 @@ export class TaskExplorerProvider implements vscode.TreeDataProvider<Node> {
       this.tickTimer = undefined;
     }
     this._onDidChangeTreeData.dispose();
+    this._onDidChangeRunningCount.dispose();
   }
 }
